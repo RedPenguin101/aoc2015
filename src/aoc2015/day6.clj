@@ -48,4 +48,4 @@
 
 (comment
   (def input (map parse (str/split-lines (slurp "resources/day6input"))))
-  (time (count) (reduce process #{} input)))
+  (time (count (reduce process #{} input))))

@@ -1,5 +1,6 @@
 {:paths ["src" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.10.2"}}
+ :deps {org.clojure/clojure {:mvn/version "1.10.2"}
+        org.clojure/math.combinatorics {:mvn/version "0.1.6"}}
  :aliases
  {:run-m {:main-opts ["-m" "aoc2015.aoc2015"]}
   :run-x {:ns-default aoc2015.aoc2015

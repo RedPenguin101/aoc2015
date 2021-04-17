@@ -11,12 +11,6 @@
  machine has to be calibrated, determining the number of molecules that can be generated in one step
  "
 
-(def replacements [["H" "HO"]
-                   ["H" "OH"]
-                   ["O" "HH"]])
-
-["H" "O" "O"]
-
 (defn split-molecules [string]
   (reduce (fn [A c]
             (if (Character/isUpperCase c)
@@ -24,8 +18,6 @@
               (conj (vec (butlast A)) (str (last A) c))))
           []
           string))
-
-(split-molecules "HaOHa")
 
 (defn replace-molecules [target [a b]]
   (keep (fn [idx] (when (= a (get target idx))
@@ -87,8 +79,6 @@
   535)
 
 (defn search [path seen replacements target it]
-  #_(println (first path))
-  (when (zero? (mod it 1000)) (println it))
   (let [[steps molecule] (first path)
         new-mols (remove seen (step molecule replacements))]
     (cond (> it 10000) :break

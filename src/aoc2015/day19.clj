@@ -85,11 +85,13 @@
           (= target molecule) steps
           :else
           (recur
-           (concat (rest path) (map #(vector (inc steps) %) new-mols))
+           (into (vec (rest path)) (map #(vector (inc steps) %) new-mols))
            (set/union seen (set new-mols))
            replacements target (inc it)))))
 
 (comment (search [[0 "e"]] #{} replacements input 0))
+
+(into '(1 2 3) '(4 5 6))
 
 (comment
   (search [[0 "e"]]
@@ -105,6 +107,44 @@
           "HOH"
           0)
   ;; => 3
-  )
 
+  "Too slow though! Maybe work backwards instead, simplifying")
 
+(defn replace-individually [s match replacement]
+  (let [re (re-pattern (str "(?=" match ")"))
+        groups (str/split s re)]
+    (for [idx (range (count groups))
+          :when (str/starts-with? (get groups idx) match)]
+      (apply str (update groups idx #(str/replace-first % match replacement))))))
+
+(defn replace-molecules2 [target [a b]]
+  (replace-individually target a b))
+
+(defn not-e-but-contains-e? [s]
+  (and (not (= "e" s)) (re-find #"e" s)))
+
+(set (sort-by count (remove not-e-but-contains-e? (mapcat #(replace-molecules2 "HOHOHO" %) [["H" "e"] ["O" "e"] ["HO" "H"] ["OH" "H"] ["HH" "O"]]))))
+
+(not-e-but-contains-e? "Hello")
+
+(defn search2 [path seen replacements it]
+  (let [[steps molecule] (first path)
+        new-mols (set (sort-by count (remove not-e-but-contains-e? (mapcat #(replace-molecules2 molecule %) replacements))))]
+    (cond (> it 10000) :break
+          (= "e" molecule) steps
+          :else
+          (recur
+           (into (vec (rest path)) (map #(vector (inc steps) %) new-mols))
+           (set/union seen (set new-mols))
+           replacements
+           (inc it)))))
+
+(search2 [[0 "HOH"]] #{} [["H" "e"] ["O" "e"] ["HO" "H"] ["OH" "H"] ["HH" "O"]] 0)
+(search2 [[0 "HOHOHO"]] #{} [["H" "e"] ["O" "e"] ["HO" "H"] ["OH" "H"] ["HH" "O"]] 0)
+
+(def repl-reversed (map (fn [[x y]] [y x]) replacements))
+
+(comment
+  (search2 [[0 input]] #{} repl-reversed 0)
+
+  "Still too slow :(")

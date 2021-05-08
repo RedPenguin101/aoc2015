@@ -120,7 +120,7 @@ What is the least amount of mana you can spend and still win the fight?
 (defn lost? [state] (<= (get-in state [:player :hp]) 0))
 
 ;; Search algorithm
-;; Paths are tuples of [total-mana-cost, spells-cast, state]
+;; Paths are tuples of [total-mana-cost, all-spells-cast, state]
 
 (defn legal-spells [state]
   (set/difference (set (keep (fn [[spell cost]] (when (>= (get-in state [:player :mana]) cost) spell)) cost))

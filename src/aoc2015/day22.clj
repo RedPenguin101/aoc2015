@@ -94,7 +94,7 @@ What is the least amount of mana you can spend and still win the fight?
 (defn active-effects [state]        (map first (get state :effects)))
 (defn has-effect?    [state effect] (some #{effect} (active-effects state)))
 
-(defn tick-effects [state]
+(defn tick-effects-timers [state]
   (update state :effects #(keep (fn [[effect timer]] (when (> timer 1) [effect (dec timer)])) %)))
 
 (defn apply-effects [state]
@@ -113,42 +113,39 @@ What is the least amount of mana you can spend and still win the fight?
   (-> state
       ;; uncomment this for hard mode
       ;;(update-in [:player :hp] - 1)
-      apply-effects tick-effects (cast-spell spell)
-      apply-effects tick-effects boss-attack))
+      apply-effects tick-effects-timers (cast-spell spell)
+      apply-effects tick-effects-timers boss-attack))
 
 (defn won?  [state] (<= (get-in state [:boss :hp]) 0))
 (defn lost? [state] (<= (get-in state [:player :hp]) 0))
 
 ;; Search algorithm
+;; Paths are tuples of [total-mana-cost, spells-cast, state]
 
 (defn legal-spells [state]
   (set/difference (set (keep (fn [[spell cost]] (when (>= (get-in state [:player :mana]) cost) spell)) cost))
                   (set (active-effects state))))
 
-(defn next-path [start-path spell seen]
-  (let [[mana-spend steps state] start-path
-        next-state (turn state spell)]
+(defn next-path [[total-mana-cost spells-cast state] spell seen]
+  (let [next-state (turn state spell)]
     (when (not (or (seen next-state) (lost? next-state)))
-      [(+ mana-spend (spell cost)) (conj steps spell)  next-state])))
+      [(+ total-mana-cost (spell cost)) (conj spells-cast spell)  next-state])))
 
 (defn search
-  ([start-state] (search #{} [[0 [] start-state]] 0))
-  ([seen paths it]
-   (let [[mana-spend steps state] (first paths)
-         next-paths (keep #(next-path (first paths) % seen) (legal-spells (-> state apply-effects tick-effects)))]
-     (cond (won? state) [mana-spend steps]
-           (> it 10000000) :break
-           :else (recur
-                  (set/union seen (set (map last next-paths)))
-                  (sort-by first (into (rest paths) next-paths))
-                  (inc it))))))
+  ([start-state] (search #{} [[0 [] start-state]]))
+  ([seen paths]
+   (let [[total-mana-cost spells-cast state] (first paths)
+         next-paths (keep #(next-path (first paths) % seen) (legal-spells (-> state apply-effects tick-effects-timers)))]
+     (if (won? state) [total-mana-cost spells-cast]
+         (recur (set/union seen (set (map last next-paths)))
+                (sort-by first (into (rest paths) next-paths)))))))
 
 (comment
   "Part 1"
   (search {:player {:hp 50 :mana 500} :boss {:hp 71 :damage 10}})
   ;; => [1824 [:recharge :poison :shield :recharge :poison :shield :recharge :poison :shield :magic-missile :poison :magic-missile]]
 
-  ;; part 2
+  ;; part 2 - have to change turn fn
   (search {:player {:hp 50 :mana 500} :boss {:hp 71 :damage 10}})
   ;; => [1937 [:shield :recharge :poison :shield :recharge :poison :shield :recharge :poison :shield :magic-missile :poison :magic-missile]]
   )
@@ -183,11 +180,11 @@ What is the least amount of mana you can spend and still win the fight?
 
 (deftest effects-tick
   (is (= [:shield :poison]
-         (active-effects (tick-effects
+         (active-effects (tick-effects-timers
                           {:player {:hp 50 :mana 500}
                            :boss   {:hp 71 :damage 10}
                            :effects [[:shield 5] [:poison 5]]}))))
-  (is (empty? (active-effects (tick-effects
+  (is (empty? (active-effects (tick-effects-timers
                                {:player {:hp 50 :mana 500}
                                 :boss   {:hp 71 :damage 10}
                                 :effects [[:shield 1] [:poison 1]]})))))

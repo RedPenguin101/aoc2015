@@ -11,3 +11,5 @@
 .hg/
 .lsp/
 .calva/
+.clj-kondo
+.portal
